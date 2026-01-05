@@ -1,0 +1,9 @@
+{
+  "domain": "wlanthermo_bbq",
+  "name": "WLANThermo BBQ",
+  "version": "0.0.1",
+  "documentation": "https://github.com/yourusername/wlanthermo_bbq",
+  "requirements": [],
+  "codeowners": ["@yourusername"],
+  "config_flow": true
+}
