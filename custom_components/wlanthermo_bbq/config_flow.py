@@ -1,7 +1,7 @@
 """Config flow for WLANThermo BBQ integration."""
 
 from homeassistant import config_entries
-from .const import DOMAIN
+from .const import DOMAIN, MODELS
 
 
 import voluptuous as vol
@@ -16,35 +16,34 @@ import aiohttp
 from .api import WlanthermoBBQApi
 from .data import SettingsData
 
-class WlanthermoBBQConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    class WlanthermoBBQOptionsFlow(config_entries.OptionsFlow):
-        def __init__(self, config_entry):
-            self.config_entry = config_entry
+class WlanthermoBBQOptionsFlow(config_entries.OptionsFlow):
+    def __init__(self, config_entry):
+        self.config_entry = config_entry
 
-        async def async_step_init(self, user_input=None):
-            errors = {}
-            if user_input is not None:
-                # All fields required
-                if not user_input.get(CONF_HOST):
-                    errors[CONF_HOST] = "required"
-                if not user_input.get(CONF_PORT):
-                    errors[CONF_PORT] = "required"
-                if not user_input.get("scan_interval"):
-                    errors["scan_interval"] = "required"
-                if not errors:
-                    return self.async_create_entry(title="Options", data=user_input)
+    async def async_step_init(self, user_input=None):
+        errors = {}
+        if user_input is not None:
+            # All fields required
+            if not user_input.get(CONF_HOST):
+                errors[CONF_HOST] = "required"
+            if not user_input.get(CONF_PORT):
+                errors[CONF_PORT] = "required"
+            if not user_input.get("scan_interval"):
+                errors["scan_interval"] = "required"
+            if not errors:
+                return self.async_create_entry(title="Options", data=user_input)
 
-            data_schema = vol.Schema({
-                vol.Required(CONF_HOST, default=self.config_entry.data.get(CONF_HOST, "")): str,
-                vol.Required(CONF_PORT, default=self.config_entry.data.get(CONF_PORT, 80)): int,
-                vol.Required("scan_interval", default=10): int,
-            })
+        data_schema = vol.Schema({
+            vol.Required(CONF_HOST, default=self.config_entry.data.get(CONF_HOST, "")): str,
+            vol.Required(CONF_PORT, default=self.config_entry.data.get(CONF_PORT, 80)): int,
+            vol.Required("scan_interval", default=10): int,
+        })
 
-            return self.async_show_form(
-                step_id="init",
-                data_schema=data_schema,
-                errors=errors,
-            )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=data_schema,
+            errors=errors,
+        )
     async def async_step_user(self, user_input=None):
         errors = {}
         if user_input is not None:
