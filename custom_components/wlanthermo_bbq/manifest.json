@@ -5,5 +5,6 @@
   "documentation": "https://github.com/MStapelfeldt/wlanthermo_bbq",
   "requirements": [],
   "codeowners": ["@MStapelfeldt"],
-  "config_flow": true
+  "config_flow": true,
+  "homeassistant": "2025.1.0"
 }
