@@ -23,8 +23,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 		"model": model,
 	}
 
-	# Forward setup to platforms (e.g., sensor)
-	await hass.config_entries.async_forward_entry_setups(entry, ["sensor"])
+
+	# Forward setup to platforms (sensor, number, select, text)
+	await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "number", "select", "text"])
 	return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):

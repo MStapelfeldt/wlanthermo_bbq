@@ -5,6 +5,7 @@
 from homeassistant import config_entries
 from .const import DOMAIN, MODELS
 import voluptuous as vol
+from homeassistant.core import callback
 from homeassistant.const import CONF_HOST, CONF_PORT
 import aiohttp
 from .api import WlanthermoBBQApi
@@ -97,7 +98,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 class WlanthermoBBQOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry):
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         errors = {}
@@ -114,8 +115,8 @@ class WlanthermoBBQOptionsFlow(config_entries.OptionsFlow):
 
         model_options = [m[0] for m in MODELS if m[0] != "select"]
         data_schema = vol.Schema({
-            vol.Required(CONF_HOST, default=self.config_entry.data.get(CONF_HOST, "")): str,
-            vol.Required(CONF_PORT, default=self.config_entry.data.get(CONF_PORT, 80)): int,
+            vol.Required(CONF_HOST, default=self._config_entry.data.get(CONF_HOST, "")): str,
+            vol.Required(CONF_PORT, default=self._config_entry.data.get(CONF_PORT, 80)): int,
             vol.Required(CONF_MODEL, default=model_options[0]): vol.In(model_options),
             vol.Required("scan_interval", default=10): int,
         })
