@@ -1,3 +1,4 @@
+
 """Number platform for WLANThermo BBQ adjustable values."""
 
 from homeassistant.components.number import NumberEntity
@@ -46,6 +47,7 @@ PITMASTER_NUMBER_FIELDS = [
     },
 ]
 
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
     entities = []
@@ -58,6 +60,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         for field in PITMASTER_NUMBER_FIELDS:
             entities.append(WlanthermoPitmasterNumber(coordinator, pitmaster, field))
     async_add_entities(entities)
+
 
 class WlanthermoChannelNumber(CoordinatorEntity, NumberEntity):
     def __init__(self, coordinator, channel, field):
@@ -73,12 +76,21 @@ class WlanthermoChannelNumber(CoordinatorEntity, NumberEntity):
         self._attr_native_unit_of_measurement = field["unit"]
 
     @property
-    def value(self):
+    def device_info(self):
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
+
+    @property
+    def native_value(self):
         return getattr(self._channel, self._field["key"], None)
 
     async def async_set_value(self, value):
         # TODO: Implement API call to set value
         pass
+
 
 class WlanthermoPitmasterNumber(CoordinatorEntity, NumberEntity):
     def __init__(self, coordinator, pitmaster, field):
@@ -94,7 +106,15 @@ class WlanthermoPitmasterNumber(CoordinatorEntity, NumberEntity):
         self._attr_native_unit_of_measurement = field["unit"]
 
     @property
-    def value(self):
+    def device_info(self):
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
+
+    @property
+    def native_value(self):
         return getattr(self._pitmaster, self._field["key"], None)
 
     async def async_set_value(self, value):

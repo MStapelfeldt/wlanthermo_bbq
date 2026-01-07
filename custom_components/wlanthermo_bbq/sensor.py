@@ -38,72 +38,13 @@ class WlanthermoSystemSensor(CoordinatorEntity, Entity):
         }
 
 
-class BBQCoordinator(DataUpdateCoordinator):
-    def __init__(self, *args, device_info=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.device_info = device_info
-
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     entry_id = config_entry.entry_id
-    api = hass.data[DOMAIN][entry_id]["api"]
-    scan_interval = timedelta(seconds=hass.data[DOMAIN][entry_id]["scan_interval"])
-    _LOGGER.debug(f"WLANThermo BBQ integration added. Data request URL: {api._base_url}/data")
-
-    # Fetch device info for device registry
+    coordinator = hass.data[DOMAIN][entry_id]["coordinator"]
     device_name = config_entry.data.get("device_name", "WLANThermo BBQ")
-    host = config_entry.data.get("host")
-    port = config_entry.data.get("port", 80)
-    path_prefix = config_entry.data.get("path_prefix", "/")
-    # Try to fetch /settings for device info
-    device_info = {}
-    try:
-        settings = await api.get_settings()
-        if settings and "device" in settings:
-            dev = settings["device"]
-            device_info = {
-                "identifiers": {(DOMAIN, dev.get("serial", host))},
-                "name": device_name,
-                "manufacturer": "WLANThermo",
-                "model": dev.get("device", "unknown"),
-                "sw_version": dev.get("sw_version", "unknown"),
-            }
-        else:
-            device_info = {
-                "identifiers": {(DOMAIN, host)},
-                "name": device_name,
-                "manufacturer": "WLANThermo",
-                "model": config_entry.data.get("model", "unknown"),
-                "sw_version": "unknown",
-            }
-    except Exception:
-        device_info = {
-            "identifiers": {(DOMAIN, host)},
-            "name": device_name,
-            "manufacturer": "WLANThermo",
-            "model": config_entry.data.get("model", "unknown"),
-            "sw_version": "unknown",
-        }
-
-    async def async_update_data():
-        _LOGGER.debug(f"WLANThermo BBQ scan_interval data fetch. Request URL: {api._base_url}/data")
-        raw = await api.get_data()
-        if not raw:
-            raise Exception("Failed to fetch /data from device")
-        return WlanthermoData(raw)
-
-    coordinator = BBQCoordinator(
-        hass,
-        _LOGGER,
-        name="WLANThermo BBQ Data",
-        update_method=async_update_data,
-        update_interval=scan_interval,
-        device_info=device_info,
-    )
-    await coordinator.async_refresh()
-
-    # Store coordinator for other platforms (number, select, text)
-    hass.data[DOMAIN][entry_id]["coordinator"] = coordinator
+    api = hass.data[DOMAIN][entry_id]["api"]
+    _LOGGER.debug(f"WLANThermo BBQ integration added. Data request URL: {api._base_url}/data")
 
     entities = []
     num_channels = len(coordinator.data.channels)
@@ -134,7 +75,11 @@ class WlanthermoChannelSensor(CoordinatorEntity, Entity):
 
     @property
     def device_info(self):
-        return self.coordinator.device_info
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
 
     @property
     def state(self):
@@ -166,7 +111,11 @@ class WlanthermoPitmasterSensor(CoordinatorEntity, Entity):
 
     @property
     def device_info(self):
-        return self.coordinator.device_info
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
 
     @property
     def state(self):

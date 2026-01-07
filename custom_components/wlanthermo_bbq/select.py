@@ -1,3 +1,4 @@
+
 """Select platform for WLANThermo BBQ adjustable values."""
 
 from homeassistant.components.select import SelectEntity
@@ -36,6 +37,7 @@ PITMASTER_SELECT_FIELDS = [
     },
 ]
 
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
     entities = []
@@ -49,6 +51,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             entities.append(WlanthermoPitmasterSelect(coordinator, pitmaster, field))
     async_add_entities(entities)
 
+
 class WlanthermoChannelSelect(CoordinatorEntity, SelectEntity):
     def __init__(self, coordinator, channel, field):
         super().__init__(coordinator)
@@ -60,12 +63,21 @@ class WlanthermoChannelSelect(CoordinatorEntity, SelectEntity):
         self._attr_options = field["options"]
 
     @property
+    def device_info(self):
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
+
+    @property
     def current_option(self):
         return getattr(self._channel, self._field["key"], None)
 
     async def async_select_option(self, option):
         # TODO: Implement API call to set value
         pass
+
 
 class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
     def __init__(self, coordinator, pitmaster, field):
@@ -76,6 +88,14 @@ class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
         self._attr_unique_id = f"pitmaster_{pitmaster.id}_{field['key']}"
         self._attr_icon = field["icon"]
         self._attr_options = field["options"]
+
+    @property
+    def device_info(self):
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
 
     @property
     def current_option(self):
