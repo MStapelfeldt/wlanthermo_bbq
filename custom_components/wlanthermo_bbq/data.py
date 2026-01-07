@@ -1,3 +1,7 @@
+class WlanthermoData:
+    def __init__(self, raw: Dict[str, Any]):
+        self.channels = [Channel(c) for c in raw.get("channels", [])]
+        self.pitmasters = [Pitmaster(p) for p in raw.get("pitmasters", [])]
 """Data models for WLANThermo BBQ /data endpoint."""
 from typing import Any, Dict, List, Optional
 

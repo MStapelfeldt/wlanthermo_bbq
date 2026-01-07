@@ -9,7 +9,6 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 import aiohttp
 from .api import WlanthermoBBQApi
 from .data import SettingsData
-from homeassistant.components.selector import SelectSelector, SelectSelectorConfig, SelectSelectorMode
 
 CONF_PATH_PREFIX = "path_prefix"
 CONF_MODEL = "model"
@@ -39,6 +38,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         model_options = [m[0] for m in MODELS if m[0] != "select"]
         data_schema = vol.Schema({
+            vol.Required("device_name", default="WLANThermo BBQ"): str,
             vol.Required(CONF_HOST): str,
             vol.Required(CONF_PORT, default=80): int,
             vol.Required(CONF_PATH_PREFIX, default="/"): str,
@@ -52,9 +52,15 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders=None,
         )
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return WlanthermoBBQOptionsFlow(config_entry)
+    
     async def async_step_device_info(self, user_input=None):
         # Get user_input from context
         user_input = self.context.get("user_input")
+        device_name = user_input.get("device_name", "WLANThermo BBQ")
         host = user_input[CONF_HOST]
         port = user_input[CONF_PORT]
         path_prefix = user_input[CONF_PATH_PREFIX]
@@ -68,6 +74,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema({
+                    vol.Required("device_name", default=device_name): str,
                     vol.Required(CONF_HOST, default=host): str,
                     vol.Required(CONF_PORT, default=port): int,
                     vol.Required(CONF_PATH_PREFIX, default=path_prefix): str,
@@ -86,14 +93,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             f"HW-Version: {device.hw_version}\n"
             f"SW-Version: {device.sw_version}"
         )
-        if user_input is not None and user_input.get("confirm"):
-            return self.async_create_entry(title=host, data=user_input)
-        # Confirm step
-        return self.async_show_form(
-            step_id="device_info",
-            data_schema=vol.Schema({vol.Required("confirm", default=True): bool}),
-            description=description,
-        )
+        return self.async_create_entry(title=device_name, data=user_input)
 
 class WlanthermoBBQOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry):
@@ -197,7 +197,6 @@ class WlanthermoBBQOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="device_info",
             data_schema=vol.Schema({vol.Required("confirm", default=True): bool}),
-            description=description,
         )
 
     @staticmethod

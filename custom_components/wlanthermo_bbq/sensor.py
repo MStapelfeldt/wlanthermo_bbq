@@ -5,6 +5,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
 from homeassistant.core import callback
 from .const import DOMAIN
+from datetime import timedelta
 from .data import WlanthermoData
 import logging
 
@@ -13,9 +14,13 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     entry_id = config_entry.entry_id
     api = hass.data[DOMAIN][entry_id]["api"]
-    scan_interval = hass.data[DOMAIN][entry_id]["scan_interval"]
+    scan_interval = timedelta(seconds=hass.data[DOMAIN][entry_id]["scan_interval"])
+    # Debug log the request URL after adding integration
+    _LOGGER.debug(f"WLANThermo BBQ integration added. Data request URL: {api._base_url}/data")
 
     async def async_update_data():
+        # Debug log the request URL at each scan_interval
+        _LOGGER.debug(f"WLANThermo BBQ scan_interval data fetch. Request URL: {api._base_url}/data")
         raw = await api.get_data()
         if not raw:
             raise Exception("Failed to fetch /data from device")
@@ -28,7 +33,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         update_method=async_update_data,
         update_interval=scan_interval,
     )
-    await coordinator.async_config_entry_first_refresh()
+    await coordinator.async_refresh()
 
     entities = []
     # Create sensor entities for each channel
