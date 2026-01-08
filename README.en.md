@@ -6,7 +6,7 @@
 ![Support](https://img.shields.io/badge/support-No%20support%20provided-lightgrey)
 ![Owner](https://img.shields.io/badge/code%20owner-@MStapelfeldt-purple)
 
-**Version:** 0.0.1  
+**Version:** 0.1.0  
 **Code Owner:** @MStapelfeldt  
 **License:** MIT
 
