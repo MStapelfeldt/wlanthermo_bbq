@@ -67,8 +67,18 @@ class WlanthermoChannelNumber(CoordinatorEntity, NumberEntity):
         super().__init__(coordinator)
         self._channel = channel
         self._field = field
-        self._attr_name = f"Channel {channel.number} {field['name']}"
-        self._attr_unique_id = f"channel_{channel.number}_{field['key']}"
+        device_name = getattr(coordinator, 'device_name', None)
+        if not device_name:
+            entry_id = getattr(coordinator, 'config_entry', None).entry_id if hasattr(coordinator, 'config_entry') else None
+            hass = getattr(coordinator, 'hass', None)
+            if hass and entry_id:
+                device_name = hass.data[DOMAIN][entry_id]["device_info"].get("name", "WLANThermo_BBQ")
+            else:
+                device_name = "WLANThermo_BBQ"
+        safe_device_name = device_name.replace(" ", "_").lower()
+        self._attr_name = f"{device_name} Channel {channel.number} {field['name']}"
+        self._attr_unique_id = f"{safe_device_name}_channel_{channel.number}_{field['key']}"
+        self.entity_id = f"number.{safe_device_name}_channel_{channel.number}_{field['key']}"
         self._attr_icon = field["icon"]
         self._attr_native_min_value = field["min"]
         self._attr_native_max_value = field["max"]
@@ -87,7 +97,7 @@ class WlanthermoChannelNumber(CoordinatorEntity, NumberEntity):
     def native_value(self):
         return getattr(self._channel, self._field["key"], None)
 
-    async def async_set_value(self, value):
+    async def async_set_native_value(self, value):
         # TODO: Implement API call to set value
         pass
 
@@ -97,8 +107,18 @@ class WlanthermoPitmasterNumber(CoordinatorEntity, NumberEntity):
         super().__init__(coordinator)
         self._pitmaster = pitmaster
         self._field = field
-        self._attr_name = f"Pitmaster {pitmaster.id} {field['name']}"
-        self._attr_unique_id = f"pitmaster_{pitmaster.id}_{field['key']}"
+        device_name = getattr(coordinator, 'device_name', None)
+        if not device_name:
+            entry_id = getattr(coordinator, 'config_entry', None).entry_id if hasattr(coordinator, 'config_entry') else None
+            hass = getattr(coordinator, 'hass', None)
+            if hass and entry_id:
+                device_name = hass.data[DOMAIN][entry_id]["device_info"].get("name", "WLANThermo_BBQ")
+            else:
+                device_name = "WLANThermo_BBQ"
+        safe_device_name = device_name.replace(" ", "_").lower()
+        self._attr_name = f"{device_name} Pitmaster {pitmaster.id} {field['name']}"
+        self._attr_unique_id = f"{safe_device_name}_pitmaster_{pitmaster.id}_{field['key']}"
+        self.entity_id = f"number.{safe_device_name}_pitmaster_{pitmaster.id}_{field['key']}"
         self._attr_icon = field["icon"]
         self._attr_native_min_value = field["min"]
         self._attr_native_max_value = field["max"]
@@ -117,6 +137,6 @@ class WlanthermoPitmasterNumber(CoordinatorEntity, NumberEntity):
     def native_value(self):
         return getattr(self._pitmaster, self._field["key"], None)
 
-    async def async_set_value(self, value):
+    async def async_set_native_value(self, value):
         # TODO: Implement API call to set value
         pass

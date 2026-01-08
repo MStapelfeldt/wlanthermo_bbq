@@ -15,6 +15,8 @@ class WlanthermoBBQApi:
         self._session = session
 
     async def _get(self, endpoint):
+        import logging
+        _LOGGER = logging.getLogger(__name__)
         url = f"{self._base_url}{endpoint}"
         if self._session is None:
             raise RuntimeError("Session not set for WlanthermoBBQApi")
@@ -24,7 +26,7 @@ class WlanthermoBBQApi:
                     resp.raise_for_status()
                     return await resp.json()
         except Exception as err:
-            # Optionally log error
+            _LOGGER.error(f"WLANThermoBBQApi: Error fetching {url}: {err}")
             return None
 
     async def get_data(self):

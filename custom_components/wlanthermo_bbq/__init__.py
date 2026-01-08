@@ -92,7 +92,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 	entry_data["platforms_setup"].update(platforms)
 	return True
 
+import asyncio
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-	await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+	platforms = ["sensor", "number", "select", "text"]
+	results = await asyncio.gather(
+		*(hass.config_entries.async_forward_entry_unload(entry, platform) for platform in platforms)
+	)
 	hass.data[DOMAIN].pop(entry.entry_id)
-	return True
+	return all(results)
