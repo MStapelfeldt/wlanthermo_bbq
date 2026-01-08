@@ -1,4 +1,3 @@
-
 # WLANThermo BBQ – Home Assistant Integration
 
 ![Version](https://img.shields.io/badge/version-0.0.1-informational)
@@ -38,10 +37,24 @@ Diese Integration verbindet Home Assistant mit einem WLANThermo BBQ (ESP32/Nano/
 2. `custom_components/wlanthermo_bbq` nach `<HA config>/custom_components/` kopieren
 3. Home Assistant neu starten
 
+## Installation über HACS
+
+1. Öffne Home Assistant und gehe zu **Einstellungen → Geräte & Dienste → HACS**.
+2. Wähle **Integrationen** und klicke oben rechts auf die drei Punkte (⋮) → **Benutzerdefiniertes Repository**.
+3. Gib die URL dieses Repositories ein: `https://github.com/MStapelfeldt/wlanthermo_bbq` und wähle **Integration** als Typ.
+4. Suche nach **WLANThermo BBQ** in HACS, installiere die Integration und starte Home Assistant neu.
+
 ## Einrichtung
 1. Home Assistant öffnen
 2. Einstellungen → Geräte & Dienste → **Integration hinzufügen** → **WLANThermo BBQ**
 3. Host, Port und ggf. Pfad-Präfix angeben
+
+## Einrichtung der Integration
+
+1. Gehe zu **Einstellungen → Geräte & Dienste → Integration hinzufügen**.
+2. Suche nach **WLANThermo BBQ** und wähle sie aus.
+3. Gib die IP-Adresse deines WLANThermo BBQ Geräts ein und wähle ggf. das Modell aus.
+4. Schließe die Einrichtung ab und wähle die gewünschte Version, falls mehrere angezeigt werden.
 
 ## Entitäten (Beispiele)
 - **Pitmaster**: Duty Cycle, Kanal, PID-Status, Sollwert
