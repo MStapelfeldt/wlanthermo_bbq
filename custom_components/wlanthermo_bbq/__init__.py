@@ -30,16 +30,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 	host = entry.data.get("host")
 	path_prefix = entry.data.get("path_prefix", "/")
 	device_info = {}
+	from .data import SettingsData
 	try:
-		settings = await api.get_settings()
-		if settings and "device" in settings:
-			dev = settings["device"]
+		settings_json = await api.get_settings()
+		settings = None
+		if settings_json:
+			try:
+				settings = SettingsData.from_json(settings_json)
+				api.settings = settings
+			except Exception as e:
+				import logging
+				logging.getLogger(__name__).error(f"WLANThermoBBQ: Failed to parse /settings JSON: {e}")
+		if settings and hasattr(settings, "device"):
+			dev = settings.device
 			device_info = {
-				"identifiers": {(DOMAIN, dev.get("serial", host))},
+				"identifiers": {(DOMAIN, dev.serial or host)},
 				"name": device_name,
 				"manufacturer": "WLANThermo",
-				"model": dev.get("device", "unknown"),
-				"sw_version": dev.get("sw_version", "unknown"),
+				"model": getattr(dev, "device", "unknown"),
+				"sw_version": getattr(dev, "sw_version", "unknown"),
 			}
 		else:
 			device_info = {

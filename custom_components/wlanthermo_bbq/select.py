@@ -61,12 +61,21 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     }
     alarm_labels = [alarm_mode_map[i] for i in range(4)]
 
-    # Get sensor types from settings (include all types)
+    # Get all sensor types from settings (show all available types)
     settings = getattr(hass.data[DOMAIN][config_entry.entry_id]["api"], 'settings', None)
     sensor_types = []
+    import logging
+    _LOGGER = logging.getLogger(__name__)
     if settings and hasattr(settings, 'sensors'):
-        sensor_types = [s.name for s in settings.sensors]
+        # settings.sensors may be a list of SensorType objects or dicts
+        try:
+            sensor_types = [s.name for s in settings.sensors]
+        except Exception as e:
+            _LOGGER.error(f"WLANThermoBBQ: Failed to extract sensor type names as objects: {e}. Trying dict fallback.")
+            # fallback if sensors is a list of dicts
+            sensor_types = [s.get('name', f"Typ {i}") for i, s in enumerate(settings.sensors)]
     if not sensor_types:
+        _LOGGER.error("WLANThermoBBQ: No sensor types found in settings.sensors. Using fallback types.")
         sensor_types = ["Typ 0", "Typ 1", "Typ 2"]
     # Channel selects
     for channel in coordinator.data.channels:

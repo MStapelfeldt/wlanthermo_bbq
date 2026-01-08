@@ -4,6 +4,7 @@ class WlanthermoData:
     def __init__(self, raw: Dict[str, Any]):
         self.channels = [Channel(c) for c in raw.get("channel", [])]
         self.pitmasters = [Pitmaster(p) for p in raw.get("pitmaster", {}).get("pm", [])]
+        self.system = SystemInfo(raw.get("system", {}))
         
 """Data models for WLANThermo BBQ /data endpoint."""
 from typing import Any, Dict, List, Optional
@@ -67,8 +68,6 @@ class SystemSettings:
         self.language: str = str(data.get("language", ""))
         self.version: str = str(data.get("version", ""))
         self.getupdate: str = str(data.get("getupdate", "false"))
-        self.autoupd: bool = bool(data.get("autoupd", False))
-        self.prerelease: bool = bool(data.get("prerelease", False))
         self.hwversion: str = str(data.get("hwversion", ""))
 
 class SensorType:
@@ -106,17 +105,11 @@ class DisplayInfo:
 
 class IotSettings:
     def __init__(self, data: Dict[str, Any]):
-        self.PMQhost: str = str(data.get("PMQhost", ""))
-        self.PMQport: int = int(data.get("PMQport", 0))
-        self.PMQuser: str = str(data.get("PMQuser", ""))
-        self.PMQpass: str = str(data.get("PMQpass", ""))
-        self.PMQqos: int = int(data.get("PMQqos", 0))
-        self.PMQon: bool = bool(data.get("PMQon", False))
-        self.PMQint: int = int(data.get("PMQint", 0))
         self.CLon: bool = bool(data.get("CLon", False))
         self.CLtoken: str = str(data.get("CLtoken", ""))
         self.CLint: int = int(data.get("CLint", 0))
         self.CLurl: str = str(data.get("CLurl", ""))
+        self.CLlink: str = str(data.get("CLurl", "")) + "?api_token=" + str(data.get("CLtoken", ""))
 
 class NotesExt:
     def __init__(self, data: Dict[str, Any]):
