@@ -2,6 +2,7 @@
 """Number platform for WLANThermo BBQ adjustable values."""
 
 from homeassistant.components.number import NumberEntity
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 
@@ -84,6 +85,7 @@ class WlanthermoChannelNumber(CoordinatorEntity, NumberEntity):
         self._attr_native_max_value = field["max"]
         self._attr_native_step = field["step"]
         self._attr_native_unit_of_measurement = field["unit"]
+        self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def device_info(self):
@@ -124,6 +126,7 @@ class WlanthermoPitmasterNumber(CoordinatorEntity, NumberEntity):
         self._attr_native_max_value = field["max"]
         self._attr_native_step = field["step"]
         self._attr_native_unit_of_measurement = field["unit"]
+        self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def device_info(self):

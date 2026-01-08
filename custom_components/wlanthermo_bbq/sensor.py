@@ -4,7 +4,7 @@ Sensor platform for WLANThermo BBQ.
 Provides system, channel, pitmaster, and temperature sensors.
 """
 
-from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.entity import Entity, EntityCategory
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
 from homeassistant.core import callback
 from .const import DOMAIN
@@ -32,7 +32,7 @@ class WlanthermoChannelTemperatureSensor(CoordinatorEntity, Entity):
             else:
                 device_name = "WLANThermo_BBQ"
         safe_device_name = device_name.replace(" ", "_").lower()
-        self._attr_name = f"{device_name} Channel {channel.number} Temperatur"
+        self._attr_name = f"Channel {channel.number} Temperatur"
         self._attr_unique_id = f"{safe_device_name}_channel_{channel.number}_temperatur"
         self.entity_id = f"sensor.{safe_device_name}_channel_{channel.number}_temperatur"
 
@@ -71,6 +71,7 @@ class WlanthermoSystemSensor(CoordinatorEntity, Entity):
         self._attr_name = "System"
         self._attr_unique_id = f"{device_name}_system"
         self.entity_id = f"sensor.{device_name}_system"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def state(self):
@@ -153,7 +154,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WlanthermoSystemGetUpdateSensor(Entity):
     def __init__(self, system, device_name):
         self._system = system
-        self._attr_name = f"{device_name} System Update Available"
+        self._attr_name = "System Update Available"
         self._attr_unique_id = f"{device_name}_system_getupdate"
         self.entity_id = f"sensor.{device_name}_system_getupdate"
 
@@ -194,9 +195,10 @@ class WlanthermoCloudLinkSensor(Entity):
             return None
     def __init__(self, iot, device_name):
         self._iot = iot
-        self._attr_name = f"{device_name} Cloud Link"
+        self._attr_name = "Cloud Link"
         self._attr_unique_id = f"{device_name}_cloud_link"
         self.entity_id = f"sensor.{device_name}_cloud_link"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def state(self):
@@ -227,17 +229,19 @@ class WlanthermoCloudLinkSensor(Entity):
 class WlanthermoSystemTimeSensor(CoordinatorEntity, Entity):
     @property
     def device_info(self):
-            entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
-            hass = getattr(self.coordinator, 'hass', None)
-            if hass and entry_id:
-                return hass.data[DOMAIN][entry_id]["device_info"]
-            return None
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
+
     def __init__(self, coordinator, sys, device_name):
         super().__init__(coordinator)
         self._sys = sys
         self._attr_name = "System Time"
         self._attr_unique_id = f"{device_name}_system_time"
         self.entity_id = f"sensor.{device_name}_system_time"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
     @property
     def state(self):
         return getattr(self._sys, 'time', None)
@@ -256,6 +260,7 @@ class WlanthermoSystemUnitSensor(CoordinatorEntity, Entity):
         self._attr_name = "System Unit"
         self._attr_unique_id = f"{device_name}_system_unit"
         self.entity_id = f"sensor.{device_name}_system_unit"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
     @property
     def state(self):
         return getattr(self._sys, 'unit', None)
@@ -274,6 +279,7 @@ class WlanthermoSystemSocSensor(CoordinatorEntity, Entity):
         self._attr_name = "System SOC"
         self._attr_unique_id = f"{device_name}_system_soc"
         self.entity_id = f"sensor.{device_name}_system_soc"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
     @property
     def state(self):
         return getattr(self._sys, 'soc', None)
@@ -292,6 +298,7 @@ class WlanthermoSystemChargeSensor(CoordinatorEntity, Entity):
         self._attr_name = "System Charge"
         self._attr_unique_id = f"{device_name}_system_charge"
         self.entity_id = f"sensor.{device_name}_system_charge"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
     @property
     def state(self):
         return getattr(self._sys, 'charge', None)
@@ -310,6 +317,7 @@ class WlanthermoSystemRssiSensor(CoordinatorEntity, Entity):
         self._attr_name = "System RSSI"
         self._attr_unique_id = f"{device_name}_system_rssi"
         self.entity_id = f"sensor.{device_name}_system_rssi"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
     @property
     def state(self):
         return getattr(self._sys, 'rssi', None)
@@ -328,6 +336,7 @@ class WlanthermoSystemOnlineSensor(CoordinatorEntity, Entity):
         self._attr_name = "System Online"
         self._attr_unique_id = f"{device_name}_system_online"
         self.entity_id = f"sensor.{device_name}_system_online"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
     @property
     def state(self):
         return getattr(self._sys, 'online', None)
@@ -356,9 +365,10 @@ class WlanthermoDeviceInfoSensor(Entity):
             return None
     def __init__(self, device, device_name):
         self._device = device
-        self._attr_name = f"{device_name} Device Info"
+        self._attr_name = "Device Info"
         self._attr_unique_id = f"{device_name}_device_info"
         self.entity_id = f"sensor.{device_name}_device_info"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def state(self):
@@ -416,9 +426,10 @@ class WlanthermoSystemInfoSensor(Entity):
             return None
     def __init__(self, system, device_name):
         self._system = system
-        self._attr_name = f"{device_name} System Info"
+        self._attr_name = "System Info"
         self._attr_unique_id = f"{device_name}_system_info"
         self.entity_id = f"sensor.{device_name}_system_info"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def state(self):
@@ -438,9 +449,10 @@ class WlanthermoSystemInfoSensor(Entity):
 class WlanthermoIotInfoSensor(Entity):
     def __init__(self, iot, device_name):
         self._iot = iot
-        self._attr_name = f"{device_name} Cloud URL"
+        self._attr_name = "Cloud URL"
         self._attr_unique_id = f"{device_name}_cloud_url"
         self.entity_id = f"sensor.{device_name}_cloud_url"
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
     @property
     def state(self):
@@ -452,12 +464,13 @@ class WlanthermoIotInfoSensor(Entity):
             "cloud_url": getattr(self._iot, "CLurl", None),
         }
 
+                # stray assignment removed
 class WlanthermoChannelSensor(CoordinatorEntity, Entity):
     def __init__(self, coordinator, channel, device_name):
         super().__init__(coordinator)
         self._channel = channel
         self._device_name = device_name
-        self._attr_name = f"{device_name} Channel {channel.number}: {channel.name}"
+        self._attr_name = f"Channel {channel.number}: {channel.name}"
         self._attr_unique_id = f"{device_name}_channel_{channel.number}"
         self.entity_id = f"sensor.{device_name}_channel_{channel.number}"
 
@@ -493,7 +506,7 @@ class WlanthermoPitmasterSensor(CoordinatorEntity, Entity):
         super().__init__(coordinator)
         self._pitmaster = pitmaster
         self._device_name = device_name
-        self._attr_name = f"{device_name} Pitmaster {idx}"
+        self._attr_name = f"Pitmaster {idx}"
         self._attr_unique_id = f"{device_name}_pitmaster_{idx}"
         self.entity_id = f"sensor.{device_name}_pitmaster_{idx}"
 

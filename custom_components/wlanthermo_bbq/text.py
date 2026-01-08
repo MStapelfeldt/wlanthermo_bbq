@@ -2,6 +2,7 @@
 """Text platform for WLANThermo BBQ adjustable channel name."""
 
 from homeassistant.components.text import TextEntity
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 
@@ -38,6 +39,7 @@ class WlanthermoChannelColorText(CoordinatorEntity, TextEntity):
         self._attr_pattern = HEX_PATTERN
         self._attr_min_length = 7
         self._attr_max_length = 7
+        self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def device_info(self):
@@ -73,6 +75,7 @@ class WlanthermoChannelNameText(CoordinatorEntity, TextEntity):
         self.entity_id = f"text.{safe_device_name}_channel_{channel.number}_name"
         self._attr_icon = "mdi:rename-box"
         self._attr_max_length = 10
+        self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def device_info(self):

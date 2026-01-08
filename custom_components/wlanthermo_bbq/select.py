@@ -2,6 +2,7 @@
 """Select platform for WLANThermo BBQ adjustable values."""
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 
@@ -133,6 +134,7 @@ class WlanthermoChannelSelect(CoordinatorEntity, SelectEntity):
         self.entity_id = f"select.{safe_device_name}_channel_{channel.number}_{field['key']}"
         self._attr_icon = field["icon"]
         self._attr_options = field["options"]
+        self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def device_info(self):
@@ -184,6 +186,7 @@ class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
         self._attr_icon = field["icon"]
         self._attr_options = field["options"]
         self._pid_profiles = pid_profiles if pid_profiles is not None else []
+        self._attr_entity_category = EntityCategory.CONFIG
 
     @property
     def device_info(self):
