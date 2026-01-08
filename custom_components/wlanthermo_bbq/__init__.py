@@ -43,19 +43,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 				logging.getLogger(__name__).error(f"WLANThermoBBQ: Failed to parse /settings JSON: {e}")
 		if settings and hasattr(settings, "device"):
 			dev = settings.device
+			# Compose a descriptive model string
+			model_str = f"{getattr(dev, 'device', 'unknown')} {getattr(dev, 'hw_version', '')} {getattr(dev, 'cpu', '')}".strip()
 			device_info = {
 				"identifiers": {(DOMAIN, dev.serial or host)},
 				"name": device_name,
 				"manufacturer": "WLANThermo",
-				"model": getattr(dev, "device", "unknown"),
+				"model": model_str,
 				"sw_version": getattr(dev, "sw_version", "unknown"),
 			}
 		else:
+			model_str = f"{getattr(dev, 'device', 'unknown')} {getattr(dev, 'hw_version', '')} {getattr(dev, 'cpu', '')}".strip()
 			device_info = {
 				"identifiers": {(DOMAIN, host)},
 				"name": device_name,
 				"manufacturer": "WLANThermo",
-				"model": entry.data.get("model", "unknown"),
+				"model": model_str,
 				"sw_version": "unknown",
 			}
 	except Exception:
@@ -67,14 +70,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 			"sw_version": "unknown",
 		}
 
+	import asyncio
 	async def async_update_data():
-		_LOGGER.debug(f"WLANThermo BBQ scan_interval data fetch. Request URL: {api._base_url}/data")
-		raw = await api.get_data()
-		if not raw:
-			raise Exception("Failed to fetch /data from device")
-		return WlanthermoData(raw)
+		_LOGGER.error(f"WLANThermo BBQ scan_interval data fetch. Request URL: {api._base_url}/data")
+		max_retries = 3
+		last_exc = None
+		for attempt in range(1, max_retries + 1):
+			try:
+				_LOGGER.error(f"WLANThermo BBQ scan_interval data fetch. Request URL: {api._base_url}/data (attempt {attempt})")
+				raw = await api.get_data()
+				_LOGGER.error(f"WLANThermo BBQ raw /data: {raw}")
+				if not raw:
+					raise Exception("Failed to fetch /data from device")
+				return WlanthermoData(raw)
+			except Exception as exc:
+				last_exc = exc
+				_LOGGER.warning(f"WLANThermo BBQ: Error fetching /data (attempt {attempt}): {exc}")
+				await asyncio.sleep(2 * attempt)  # Exponential backoff
+		_LOGGER.error(f"WLANThermo BBQ: Failed to fetch /data after {max_retries} attempts: {last_exc}")
+		raise last_exc or Exception("Unknown error fetching /data")
 
-	coordinator = DataUpdateCoordinator(
+	class DebugDataUpdateCoordinator(DataUpdateCoordinator):
+		async def _handle_coordinator_update(self) -> None:
+			_LOGGER.error(f"[WLANThermo] DataUpdateCoordinator update triggered, coordinator id: {id(self)}")
+			await super()._handle_coordinator_update()
+
+	coordinator = DebugDataUpdateCoordinator(
 		hass,
 		_LOGGER,
 		name="WLANThermo BBQ Data",

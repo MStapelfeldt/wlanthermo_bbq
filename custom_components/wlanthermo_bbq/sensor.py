@@ -22,7 +22,7 @@ class WlanthermoChannelTemperatureSensor(CoordinatorEntity, Entity):
     """
     def __init__(self, coordinator, channel, field=None):
         super().__init__(coordinator)
-        self._channel = channel
+        self._channel_number = channel.number
         device_name = getattr(coordinator, 'device_name', None)
         if not device_name:
             entry_id = getattr(coordinator, 'config_entry', None).entry_id if hasattr(coordinator, 'config_entry') else None
@@ -32,36 +32,57 @@ class WlanthermoChannelTemperatureSensor(CoordinatorEntity, Entity):
             else:
                 device_name = "WLANThermo_BBQ"
         safe_device_name = device_name.replace(" ", "_").lower()
-        self._attr_name = f"Channel {channel.number} Temperatur"
-        self._attr_unique_id = f"{safe_device_name}_channel_{channel.number}_temperatur"
-        self.entity_id = f"sensor.{safe_device_name}_channel_{channel.number}_temperatur"
+        self._attr_name = f"Channel {self._channel_number} Temperatur"
+        self._attr_unique_id = f"{safe_device_name}_channel_{self._channel_number}_temperatur"
+        self.entity_id = f"sensor.{safe_device_name}_channel_{self._channel_number}_temperatur"
+        
+    def _get_channel(self):
+        channels = getattr(self.coordinator.data, 'channels', [])
+        for ch in channels:
+            if ch.number == self._channel_number:
+                return ch
+        return None
 
     @property
     def device_info(self):
         entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
         hass = getattr(self.coordinator, 'hass', None)
         if hass and entry_id:
-            return hass.data[DOMAIN][entry_id]["device_info"]
+            device_info = hass.data[DOMAIN][entry_id]["device_info"].copy()
+            # Try to enrich with device attributes if available
+            api = hass.data[DOMAIN][entry_id].get("api")
+            settings = getattr(api, "settings", None)
+            if settings and hasattr(settings, "device"):
+                dev = settings.device
+                # Add custom fields for Geräte-Info box
+                device_info["sw_version"] = getattr(dev, "sw_version", None)
+                device_info["hw_version"] = getattr(dev, "hw_version", None)
+                device_info["model"] = f"{getattr(dev, "device", None)} {getattr(dev, "hw_version", None)} {getattr(dev, "cpu", None)}"
+            return device_info
         return None
 
     @property
     def state(self):
         """Return the current temperature value."""
-        return self._channel.temp
+        channel = self._get_channel()
+        return getattr(channel, 'temp', None) if channel else None
 
     @property
     def extra_state_attributes(self):
         """Return extra attributes for the temperature sensor."""
+        channel = self._get_channel()
+        if not channel:
+            return {}
         return {
-            "number": self._channel.number,
-            "name": self._channel.name,
-            "typ": self._channel.typ,
-            "min": self._channel.min,
-            "max": self._channel.max,
-            "alarm": self._channel.alarm,
-            "color": self._channel.color,
-            "fixed": self._channel.fixed,
-            "connected": self._channel.connected,
+            "number": channel.number,
+            "name": channel.name,
+            "typ": channel.typ,
+            "min": channel.min,
+            "max": channel.max,
+            "alarm": channel.alarm,
+            "color": channel.color,
+            "fixed": channel.fixed,
+            "connected": channel.connected,
         }
 
 class WlanthermoSystemSensor(CoordinatorEntity, Entity):
@@ -97,7 +118,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry_id]["coordinator"]
     device_name = config_entry.data.get("device_name", "WLANThermo BBQ")
     api = hass.data[DOMAIN][entry_id]["api"]
-    _LOGGER.debug(f"WLANThermo BBQ integration added. Data request URL: {api._base_url}/data")
 
     entities = []
     import re
@@ -106,12 +126,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     if coordinator.data is not None:
         num_channels = len(getattr(coordinator.data, 'channels', []))
         num_pitmasters = len(getattr(coordinator.data, 'pitmasters', []))
-        _LOGGER.debug(f"WLANThermo BBQ: Found {num_channels} channels and {num_pitmasters} pitmasters.")
         for channel in getattr(coordinator.data, 'channels', []):
             entities.append(WlanthermoChannelTemperatureSensor(coordinator, channel))
         # Debug: Log presence and type of coordinator.data.system
         sys_obj = getattr(coordinator.data, 'system', None)
-        _LOGGER.debug(f"WLANThermo BBQ: coordinator.data.system = {sys_obj!r}, type={type(sys_obj)}")
         if sys_obj:
             entities.append(WlanthermoSystemSensor(coordinator, safe_device_name))
             entities.append(WlanthermoSystemTimeSensor(coordinator, sys_obj, safe_device_name))
@@ -128,29 +146,29 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # Always attempt to add device info sensors from /settings
     settings = getattr(hass.data[DOMAIN][entry_id]["api"], "settings", None)
     if settings:
-        _LOGGER.debug("WLANThermo BBQ: /settings found, adding sensors.")
         if hasattr(settings, "device"):
             entities.append(WlanthermoDeviceInfoSensor(settings.device, safe_device_name))
-            _LOGGER.debug("WLANThermo BBQ: Added DeviceInfoSensor from /settings.device.")
         else:
             _LOGGER.warning("WLANThermo BBQ: /settings.device not found.")
         if hasattr(settings, "system"):
             entities.append(WlanthermoSystemInfoSensor(settings.system, safe_device_name))
             entities.append(WlanthermoSystemGetUpdateSensor(settings.system, safe_device_name))
-            _LOGGER.debug("WLANThermo BBQ: Added SystemInfoSensor and SystemGetUpdateSensor from /settings.system.")
         else:
             _LOGGER.warning("WLANThermo BBQ: /settings.system not found.")
         if hasattr(settings, "iot"):
             entities.append(WlanthermoIotInfoSensor(settings.iot, safe_device_name))
             entities.append(WlanthermoCloudLinkSensor(settings.iot, safe_device_name))
-            _LOGGER.debug("WLANThermo BBQ: Added IotInfoSensor and CloudLinkSensor from /settings.iot.")
         else:
             _LOGGER.warning("WLANThermo BBQ: /settings.iot not found.")
     else:
         _LOGGER.warning("WLANThermo BBQ: /settings not found in API. No /settings sensors will be created.")
 
-    # Add all entities to Home Assistant (only one call)
-    async_add_entities(entities)
+    # If async_add_entities is a coroutine, await it
+    import inspect
+    if inspect.iscoroutinefunction(async_add_entities):
+        hass.loop.create_task(async_add_entities(entities))
+    else:
+        async_add_entities(entities)
 class WlanthermoSystemGetUpdateSensor(Entity):
     def __init__(self, system, device_name):
         self._system = system

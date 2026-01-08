@@ -2,9 +2,11 @@ from typing import Any, Dict, List, Optional
 
 class WlanthermoData:
     def __init__(self, raw: Dict[str, Any]):
-        self.channels = [Channel(c) for c in raw.get("channel", [])]
-        self.pitmasters = [Pitmaster(p) for p in raw.get("pitmaster", {}).get("pm", [])]
-        self.system = SystemInfo(raw.get("system", {}))
+        # Always create new objects for each update to ensure sensors update
+        import copy
+        self.channels = [Channel(copy.deepcopy(c)) for c in raw.get("channel", [])]
+        self.pitmasters = [Pitmaster(copy.deepcopy(p)) for p in raw.get("pitmaster", {}).get("pm", [])]
+        self.system = SystemInfo(copy.deepcopy(raw.get("system", {})))
         
 """Data models for WLANThermo BBQ /data endpoint."""
 from typing import Any, Dict, List, Optional
