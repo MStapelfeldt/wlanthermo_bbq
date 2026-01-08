@@ -65,19 +65,27 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     # Get all sensor types from settings (show all available types)
     settings = getattr(hass.data[DOMAIN][config_entry.entry_id]["api"], 'settings', None)
     sensor_types = []
+    sensor_type_map = {}
     import logging
     _LOGGER = logging.getLogger(__name__)
     if settings and hasattr(settings, 'sensors'):
-        # settings.sensors may be a list of SensorType objects or dicts
         try:
-            sensor_types = [s.name for s in settings.sensors]
+            # settings.sensors is a list of SensorType objects
+            for idx, s in enumerate(settings.sensors):
+                name = getattr(s, 'name', f"Typ {idx}")
+                sensor_types.append(name)
+                sensor_type_map[name] = idx
         except Exception as e:
             _LOGGER.error(f"WLANThermoBBQ: Failed to extract sensor type names as objects: {e}. Trying dict fallback.")
             # fallback if sensors is a list of dicts
-            sensor_types = [s.get('name', f"Typ {i}") for i, s in enumerate(settings.sensors)]
+            for i, s in enumerate(settings.sensors):
+                name = s.get('name', f"Typ {i}")
+                sensor_types.append(name)
+                sensor_type_map[name] = i
     if not sensor_types:
         _LOGGER.error("WLANThermoBBQ: No sensor types found in settings.sensors. Using fallback types.")
         sensor_types = ["Typ 0", "Typ 1", "Typ 2"]
+        sensor_type_map = {name: i for i, name in enumerate(sensor_types)}
     # Channel selects
     for channel in coordinator.data.channels:
         # Alarm mode select
@@ -94,6 +102,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             "name": "Probe Type",
             "icon": "mdi:thermometer",
             "options": sensor_types,
+            "sensor_type_map": sensor_type_map,
         }))
     # Get PID profiles from settings
     pid_profiles = []
@@ -118,7 +127,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WlanthermoChannelSelect(CoordinatorEntity, SelectEntity):
     def __init__(self, coordinator, channel, field):
         super().__init__(coordinator)
-        self._channel = channel
+        self._channel_number = channel.number
         self._field = field
         device_name = getattr(coordinator, 'device_name', None)
         if not device_name:
@@ -144,32 +153,76 @@ class WlanthermoChannelSelect(CoordinatorEntity, SelectEntity):
             return hass.data[DOMAIN][entry_id]["device_info"]
         return None
 
+    def _get_channel(self):
+        channels = getattr(self.coordinator.data, 'channels', [])
+        for ch in channels:
+            if ch.number == self._channel_number:
+                return ch
+        return None
+
     @property
     def current_option(self):
+        channel = self._get_channel()
+        if not channel:
+            return None
         # For alarm, return the translated label
         if self._field["key"] == "alarm":
-            alarm_value = getattr(self._channel, "alarm", None)
+            alarm_value = getattr(channel, "alarm", None)
             alarm_mode_map = self._field.get("alarm_mode_map")
             if alarm_mode_map and alarm_value in alarm_mode_map:
                 return alarm_mode_map[alarm_value]
             return None
-        # For probe type, return the name from options if possible
+        # For probe type, return the name from mapping if possible
         if self._field["key"] == "typ":
-            typ_value = getattr(self._channel, "typ", None)
-            if self._attr_options and 0 <= typ_value < len(self._attr_options):
-                return self._attr_options[typ_value]
+            typ_value = getattr(channel, "typ", None)
+            options = self._attr_options
+            if options and 0 <= typ_value < len(options):
+                return options[typ_value]
             return None
-        return getattr(self._channel, self._field["key"], None)
+        return getattr(channel, self._field["key"], None)
 
     async def async_select_option(self, option):
-        # TODO: Implement API call to set value
-        pass
+        api = self.coordinator.hass.data[DOMAIN][self.coordinator.config_entry.entry_id]["api"]
+        channel = self._get_channel()
+        if not channel:
+            import logging
+            logging.getLogger(__name__).error(f"[WLANThermo] ChannelSelect: Channel {self._channel_number} not found for select_option")
+            return
+        # Map label back to value for alarm or typ
+        value = option
+        if self._field["key"] == "alarm":
+            # Reverse lookup in alarm_mode_map
+            alarm_mode_map = self._field.get("alarm_mode_map", {})
+            for k, v in alarm_mode_map.items():
+                if v == option:
+                    value = k
+                    break
+        elif self._field["key"] == "typ":
+            sensor_type_map = self._field.get("sensor_type_map", {})
+            if option in sensor_type_map:
+                value = sensor_type_map[option]
+            else:
+                # fallback to index if mapping missing
+                if option in self._attr_options:
+                    value = self._attr_options.index(option)
+        # Build the full channel dict
+        channel_data = {
+            "number": channel.number,
+            "name": channel.name,
+            "typ": value if self._field["key"] == "typ" else channel.typ,
+            "min": channel.min,
+            "max": channel.max,
+            "alarm": value if self._field["key"] == "alarm" else channel.alarm,
+            "color": channel.color,
+        }
+        await api.async_set_channel(channel_data)
+        await self.coordinator.async_request_refresh()
 
 
 class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
     def __init__(self, coordinator, pitmaster, field, pid_profiles=None):
         super().__init__(coordinator)
-        self._pitmaster = pitmaster
+        self._pitmaster_id = pitmaster.id
         self._field = field
         device_name = getattr(coordinator, 'device_name', None)
         if not device_name:
@@ -196,24 +249,49 @@ class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
             return hass.data[DOMAIN][entry_id]["device_info"]
         return None
 
+    def _get_pitmaster(self):
+        pitmasters = getattr(self.coordinator.data, 'pitmasters', [])
+        for pm in pitmasters:
+            if pm.id == self._pitmaster_id:
+                return pm
+        return None
+
     @property
     def current_option(self):
+        pitmaster = self._get_pitmaster()
+        if not pitmaster:
+            return None
         if self._field["key"] == "pid" and self._pid_profiles:
             # Find profile name by id
-            pid_id = getattr(self._pitmaster, "pid", None)
+            pid_id = getattr(pitmaster, "pid", None)
             for p in self._pid_profiles:
                 if hasattr(p, "id") and p.id == pid_id:
                     return p.name
             return None
-        return getattr(self._pitmaster, self._field["key"], None)
+        return getattr(pitmaster, self._field["key"], None)
 
     async def async_select_option(self, option):
-        # TODO: Implement API call to set value
-        if self._field["key"] == "pid" and self._pid_profiles:
+        api = self.coordinator.hass.data[DOMAIN][self.coordinator.config_entry.entry_id]["api"]
+        pitmaster = self._get_pitmaster()
+        if not pitmaster:
+            import logging
+            logging.getLogger(__name__).error(f"[WLANThermo] PitmasterSelect: Pitmaster {self._pitmaster_id} not found for select_option")
+            return
+        pitmaster_data = {
+            "id": pitmaster.id,
+            "channel": pitmaster.channel,
+            "pid": pitmaster.pid,
+            "value": pitmaster.value,
+            "set": pitmaster.set,
+            "typ": pitmaster.typ,
+        }
+        if self._field["key"] == "typ":
+            pitmaster_data["typ"] = option
+        elif self._field["key"] == "pid" and self._pid_profiles:
             # Find profile id by name
             for p in self._pid_profiles:
                 if hasattr(p, "name") and p.name == option:
-                    # Set pitmaster.pid to p.id (API call needed)
-                    # Example: await self.coordinator.api.set_pitmaster_pid(self._pitmaster.id, p.id)
-                    return
-        pass
+                    pitmaster_data["pid"] = p.id
+                    break
+        await api.async_set_pitmaster(pitmaster_data)
+        await self.coordinator.async_request_refresh()

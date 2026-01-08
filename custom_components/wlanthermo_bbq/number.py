@@ -66,7 +66,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class WlanthermoChannelNumber(CoordinatorEntity, NumberEntity):
     def __init__(self, coordinator, channel, field):
         super().__init__(coordinator)
-        self._channel = channel
+        self._channel_number = channel.number
         self._field = field
         device_name = getattr(coordinator, 'device_name', None)
         if not device_name:
@@ -95,19 +95,46 @@ class WlanthermoChannelNumber(CoordinatorEntity, NumberEntity):
             return hass.data[DOMAIN][entry_id]["device_info"]
         return None
 
+    def _get_channel(self):
+        channels = getattr(self.coordinator.data, 'channels', [])
+        for ch in channels:
+            if ch.number == self._channel_number:
+                return ch
+        return None
+
     @property
     def native_value(self):
-        return getattr(self._channel, self._field["key"], None)
+        channel = self._get_channel()
+        return getattr(channel, self._field["key"], None) if channel else None
 
     async def async_set_native_value(self, value):
-        # TODO: Implement API call to set value
-        pass
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+        channel = self._get_channel()
+        if not channel:
+            _LOGGER.error(f"[WLANThermo] ChannelNumber: Channel {self._channel_number} not found for set_native_value")
+            return
+        _LOGGER.warning(f"[WLANThermo] ChannelNumber: Setting {self._field['key']} for channel {channel.number} to {value}")
+        api = self.coordinator.hass.data[DOMAIN][self.coordinator.config_entry.entry_id]["api"]
+        channel_data = {
+            "number": channel.number,
+            "name": channel.name,
+            "typ": channel.typ,
+            "min": value if self._field["key"] == "min" else channel.min,
+            "max": value if self._field["key"] == "max" else channel.max,
+            "alarm": channel.alarm,
+            "color": channel.color,
+        }
+        _LOGGER.warning(f"[WLANThermo] ChannelNumber: Sending to API: {channel_data}")
+        result = await api.async_set_channel(channel_data)
+        _LOGGER.warning(f"[WLANThermo] ChannelNumber: API result: {result}")
+        await self.coordinator.async_request_refresh()
 
 
 class WlanthermoPitmasterNumber(CoordinatorEntity, NumberEntity):
     def __init__(self, coordinator, pitmaster, field):
         super().__init__(coordinator)
-        self._pitmaster = pitmaster
+        self._pitmaster_id = pitmaster.id
         self._field = field
         device_name = getattr(coordinator, 'device_name', None)
         if not device_name:
@@ -136,10 +163,36 @@ class WlanthermoPitmasterNumber(CoordinatorEntity, NumberEntity):
             return hass.data[DOMAIN][entry_id]["device_info"]
         return None
 
+    def _get_pitmaster(self):
+        pitmasters = getattr(self.coordinator.data, 'pitmasters', [])
+        for pm in pitmasters:
+            if pm.id == self._pitmaster_id:
+                return pm
+        return None
+
     @property
     def native_value(self):
-        return getattr(self._pitmaster, self._field["key"], None)
+        pitmaster = self._get_pitmaster()
+        return getattr(pitmaster, self._field["key"], None) if pitmaster else None
 
     async def async_set_native_value(self, value):
-        # TODO: Implement API call to set value
-        pass
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+        pitmaster = self._get_pitmaster()
+        if not pitmaster:
+            _LOGGER.error(f"[WLANThermo] PitmasterNumber: Pitmaster {self._pitmaster_id} not found for set_native_value")
+            return
+        _LOGGER.warning(f"[WLANThermo] PitmasterNumber: Setting {self._field['key']} for pitmaster {pitmaster.id} to {value}")
+        api = self.coordinator.hass.data[DOMAIN][self.coordinator.config_entry.entry_id]["api"]
+        pitmaster_data = {
+            "id": pitmaster.id,
+            "channel": pitmaster.channel,
+            "pid": pitmaster.pid,
+            "value": value if self._field["key"] == "value" else pitmaster.value,
+            "set": value if self._field["key"] == "set" else pitmaster.set,
+            "typ": pitmaster.typ,
+        }
+        _LOGGER.warning(f"[WLANThermo] PitmasterNumber: Sending to API: {pitmaster_data}")
+        result = await api.async_set_pitmaster(pitmaster_data)
+        _LOGGER.warning(f"[WLANThermo] PitmasterNumber: API result: {result}")
+        await self.coordinator.async_request_refresh()

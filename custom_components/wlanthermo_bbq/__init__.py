@@ -72,14 +72,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
 	import asyncio
 	async def async_update_data():
-		_LOGGER.error(f"WLANThermo BBQ scan_interval data fetch. Request URL: {api._base_url}/data")
 		max_retries = 3
 		last_exc = None
 		for attempt in range(1, max_retries + 1):
 			try:
-				_LOGGER.error(f"WLANThermo BBQ scan_interval data fetch. Request URL: {api._base_url}/data (attempt {attempt})")
 				raw = await api.get_data()
-				_LOGGER.error(f"WLANThermo BBQ raw /data: {raw}")
 				if not raw:
 					raise Exception("Failed to fetch /data from device")
 				return WlanthermoData(raw)
@@ -87,12 +84,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 				last_exc = exc
 				_LOGGER.warning(f"WLANThermo BBQ: Error fetching /data (attempt {attempt}): {exc}")
 				await asyncio.sleep(2 * attempt)  # Exponential backoff
-		_LOGGER.error(f"WLANThermo BBQ: Failed to fetch /data after {max_retries} attempts: {last_exc}")
 		raise last_exc or Exception("Unknown error fetching /data")
 
 	class DebugDataUpdateCoordinator(DataUpdateCoordinator):
 		async def _handle_coordinator_update(self) -> None:
-			_LOGGER.error(f"[WLANThermo] DataUpdateCoordinator update triggered, coordinator id: {id(self)}")
 			await super()._handle_coordinator_update()
 
 	coordinator = DebugDataUpdateCoordinator(

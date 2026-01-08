@@ -54,8 +54,18 @@ class WlanthermoChannelColorText(CoordinatorEntity, TextEntity):
         return getattr(self._channel, "color", "#000000")
 
     async def async_set_value(self, value: str):
-        # TODO: Implement API call to set color
-        pass
+        api = self.coordinator.hass.data[DOMAIN][self.coordinator.config_entry.entry_id]["api"]
+        channel_data = {
+            "number": self._channel.number,
+            "name": self._channel.name,
+            "typ": self._channel.typ,
+            "min": self._channel.min,
+            "max": self._channel.max,
+            "alarm": self._channel.alarm,
+            "color": value,
+        }
+        await api.async_set_channel(channel_data)
+        await self.coordinator.async_request_refresh()
 
 class WlanthermoChannelNameText(CoordinatorEntity, TextEntity):
     def __init__(self, coordinator, channel):
@@ -90,5 +100,15 @@ class WlanthermoChannelNameText(CoordinatorEntity, TextEntity):
         return self._channel.name
 
     async def async_set_value(self, value: str):
-        # TODO: Implement API call to set channel name
-        pass
+        api = self.coordinator.hass.data[DOMAIN][self.coordinator.config_entry.entry_id]["api"]
+        channel_data = {
+            "number": self._channel.number,
+            "name": value,
+            "typ": self._channel.typ,
+            "min": self._channel.min,
+            "max": self._channel.max,
+            "alarm": self._channel.alarm,
+            "color": self._channel.color,
+        }
+        await api.async_set_channel(channel_data)
+        await self.coordinator.async_request_refresh()
