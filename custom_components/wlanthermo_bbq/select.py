@@ -220,7 +220,7 @@ class WlanthermoChannelSelect(CoordinatorEntity, SelectEntity):
 
 
 class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
-    def __init__(self, coordinator, pitmaster, field, pid_profiles=None):
+    def __init__(self, coordinator, pitmaster, field, pid_profiles=None, channel_options=None, channel_number_by_name=None, channel_name_map=None):
         super().__init__(coordinator)
         self._pitmaster_id = pitmaster.id
         self._field = field
@@ -233,12 +233,15 @@ class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
             else:
                 device_name = "WLANThermo_BBQ"
         safe_device_name = device_name.replace(" ", "_").lower()
-        self._attr_name = f"{device_name} Pitmaster {pitmaster.id} {field['name']}"
+        self._attr_name = f"{device_name} Pitmaster {pitmaster.id + 1} {field['name']}"
         self._attr_unique_id = f"{safe_device_name}_pitmaster_{pitmaster.id}_{field['key']}"
         self.entity_id = f"select.{safe_device_name}_pitmaster_{pitmaster.id}_{field['key']}"
         self._attr_icon = field["icon"]
         self._attr_options = field["options"]
         self._pid_profiles = pid_profiles if pid_profiles is not None else []
+        self._channel_options = channel_options if channel_options is not None else []
+        self._channel_number_by_name = channel_number_by_name if channel_number_by_name is not None else {}
+        self._channel_name_map = channel_name_map if channel_name_map is not None else {}
         self._attr_entity_category = EntityCategory.CONFIG
 
     @property
@@ -268,6 +271,10 @@ class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
                 if hasattr(p, "id") and p.id == pid_id:
                     return p.name
             return None
+        if self._field["key"] == "channel" and self._channel_name_map:
+            channel_value = getattr(pitmaster, "channel", None)
+            # Return the channel name for the current channel number
+            return self._channel_name_map.get(channel_value, str(channel_value))
         return getattr(pitmaster, self._field["key"], None)
 
     async def async_select_option(self, option):
@@ -293,5 +300,10 @@ class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
                 if hasattr(p, "name") and p.name == option:
                     pitmaster_data["pid"] = p.id
                     break
+        elif self._field["key"] == "channel" and self._channel_number_by_name:
+            # Map selected channel name back to channel number
+            channel_number = self._channel_number_by_name.get(option)
+            if channel_number is not None:
+                pitmaster_data["channel"] = channel_number
         await api.async_set_pitmaster(pitmaster_data)
         await self.coordinator.async_request_refresh()
