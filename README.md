@@ -26,6 +26,9 @@ Diese Integration verbindet Home Assistant mit einem WLANThermo BBQ (ESP32/Nano/
 - Konfigurierbare Scan-Intervalle
 - Unterstützung für verschiedene WLANThermo-Modelle
 - Offline-toleranter Start (Entitäten werden verfügbar, sobald das Gerät online ist)
+- Pitmaster-Kanal-Auswahl: Kanal für jeden Pitmaster anzeigen und wählen
+- Dynamischer Cloud-Status-Sensor: zeigt immer den aktuellen Verbindungsstatus
+- Verbesserte Übersetzungsunterstützung für alle Status- und Auswahlwerte
 
 ## API-Referenz
 - Offizielle HTTP-API: https://github.com/WLANThermo-nano/WLANThermo_ESP32_Software/wiki/HTTP

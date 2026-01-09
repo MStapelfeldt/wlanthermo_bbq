@@ -19,13 +19,9 @@
 This integration connects Home Assistant to a WLANThermo BBQ (ESP32/Nano/Next). It reads sensor and pitmaster data and exposes them as entities.
 
 ## Features
-- Automatic discovery and setup via Home Assistant UI
-- Temperature sensors for all channels (by name & number)
-- Pitmaster sensors (e.g., duty cycle)
-- System info: RSSI, battery status, charging
-- Configurable scan intervals
-- Support for multiple WLANThermo models
-- Offline-tolerant startup (entities become available when the device is online)
+ - Pitmaster channel select: choose and view the selected channel for each pitmaster
+ - Dynamic cloud status sensor: always reflects the latest connection state
+ - Improved translation support for all status and select values
 
 ## API Reference
 - Official HTTP API: https://github.com/WLANThermo-nano/WLANThermo_ESP32_Software/wiki/HTTP

@@ -1,7 +1,7 @@
 {
   "domain": "wlanthermo_bbq",
   "name": "WLANThermo BBQ",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "documentation": "https://github.com/MStapelfeldt/wlanthermo_bbq",
   "requirements": [],
   "codeowners": ["@MStapelfeldt"],
