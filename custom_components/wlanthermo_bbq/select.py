@@ -112,10 +112,30 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         pid_profile_names = [p.name for p in pid_profiles]
     if not pid_profile_names:
         pid_profile_names = ["Profile 0", "Profile 1", "Profile 2"]
+    # Add pitmaster channel select (shows and sets selected channel for each pitmaster)
     for pitmaster in coordinator.data.pitmasters:
+        # Build channel name options and mapping
+        channels = getattr(coordinator.data, 'channels', [])
+        channel_options = [ch.name for ch in channels]
+        channel_number_by_name = {ch.name: ch.number for ch in channels}
+        channel_name_map = {ch.number: ch.name for ch in channels}
+        # Add channel select entity
+        entities.append(WlanthermoPitmasterSelect(
+            coordinator,
+            pitmaster,
+            {
+                "key": "channel",
+                "name": "Channel",
+                "icon": "mdi:link-variant",
+                "options": channel_options,
+            },
+            channel_options=channel_options,
+            channel_number_by_name=channel_number_by_name,
+            channel_name_map=channel_name_map
+        ))
+        # Add other pitmaster select entities
         for field in PITMASTER_SELECT_FIELDS:
             if field["key"] == "pid":
-                # Use profile names for PID select
                 field = field.copy()
                 field["options"] = pid_profile_names
                 entities.append(WlanthermoPitmasterSelect(coordinator, pitmaster, field, pid_profiles=pid_profiles))
@@ -165,20 +185,21 @@ class WlanthermoChannelSelect(CoordinatorEntity, SelectEntity):
         channel = self._get_channel()
         if not channel:
             return None
-        # For alarm, return the translated label
+        # For alarm, return the translated label from the latest options
         if self._field["key"] == "alarm":
             alarm_value = getattr(channel, "alarm", None)
-            alarm_mode_map = self._field.get("alarm_mode_map")
-            if alarm_mode_map and alarm_value in alarm_mode_map:
-                return alarm_mode_map[alarm_value]
+            # Use the index to select the correct label from options
+            if self._attr_options and alarm_value is not None and 0 <= alarm_value < len(self._attr_options):
+                return self._attr_options[alarm_value]
             return None
-        # For probe type, return the name from mapping if possible
+        # For probe type, return the name from the latest options if possible
         if self._field["key"] == "typ":
             typ_value = getattr(channel, "typ", None)
             options = self._attr_options
-            if options and 0 <= typ_value < len(options):
+            if options and typ_value is not None and 0 <= typ_value < len(options):
                 return options[typ_value]
             return None
+        # For other fields, return the current value
         return getattr(channel, self._field["key"], None)
 
     async def async_select_option(self, option):
@@ -271,10 +292,14 @@ class WlanthermoPitmasterSelect(CoordinatorEntity, SelectEntity):
                 if hasattr(p, "id") and p.id == pid_id:
                     return p.name
             return None
-        if self._field["key"] == "channel" and self._channel_name_map:
+        if self._field["key"] == "channel":
+            # Always rebuild options and map current value to name
+            coordinator = self.coordinator
+            channels = getattr(coordinator.data, 'channels', [])
+            channel_name_map = {ch.number: ch.name for ch in channels}
+            self._attr_options = [ch.name for ch in channels]
             channel_value = getattr(pitmaster, "channel", None)
-            # Return the channel name for the current channel number
-            return self._channel_name_map.get(channel_value, str(channel_value))
+            return channel_name_map.get(channel_value, str(channel_value))
         return getattr(pitmaster, self._field["key"], None)
 
     async def async_select_option(self, option):

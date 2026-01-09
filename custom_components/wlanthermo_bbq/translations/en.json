@@ -17,6 +17,11 @@
     "error": {
       "required": "This field is required."
     },
+    "system_online": {
+    "0": "Not connected",
+    "1": "Standby",
+    "2": "Connected"
+    },
     "option": {
       "select": "Select",
       "link_v1": "Link V1",

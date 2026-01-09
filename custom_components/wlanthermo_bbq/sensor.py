@@ -492,15 +492,39 @@ class WlanthermoSystemOnlineSensor(CoordinatorEntity, SensorEntity):
         return None
     def __init__(self, coordinator, sys, device_name):
         super().__init__(coordinator)
-        self._sys = sys
         self._attr_has_entity_name = True
         self._attr_translation_key = "cloud_status"
         self._attr_unique_id = f"{device_name}_system_online"
         self.entity_id = f"sensor.{device_name}_system_online"
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
     @property
     def state(self):
-        return getattr(self._sys, 'online', None)
+        # Always fetch the latest value from coordinator.data.system
+        system = getattr(self.coordinator.data, 'system', None)
+        value = getattr(system, 'online', None) if system else None
+        # Map value to translated string
+        import os, json
+        hass = getattr(self, 'hass', None)
+        lang = getattr(hass.config, 'language', 'en') if hass and hasattr(hass, 'config') else 'en'
+        translations_path = os.path.join(os.path.dirname(__file__), 'translations', f'{lang}.json')
+        if not os.path.exists(translations_path):
+            translations_path = os.path.join(os.path.dirname(__file__), 'translations', 'en.json')
+        try:
+            with open(translations_path, encoding='utf-8') as f:
+                translations = json.load(f)
+            online_map = translations.get('system_online', {
+                "0": "Not connected",
+                "1": "Standby",
+                "2": "Connected"
+            })
+        except Exception:
+            online_map = {
+                "0": "Not connected",
+                "1": "Standby",
+                "2": "Connected"
+            }
+        return online_map.get(str(value), str(value))
 
 # Device Info Sensor
 class WlanthermoDeviceInfoSensor(SensorEntity):
