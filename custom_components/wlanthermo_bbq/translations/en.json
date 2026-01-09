@@ -53,8 +53,13 @@
       "temperature_unit": {"name": "Temperature Unit"},
       "cloud_status": {"name": "Cloud status"},
       "channel": {"name": "Channel"},
+      "channel_temperature": {"name": "Channel {channel_number} Temperature"},
       "system_time": {"name": "System Time"},
-      "device_info": {"name": "Device Info"}
+      "device_info": {"name": "Device Info"},
+      "channel_entity": {"name": "Channel {channel_number} {field_name}"},
+        "pitmaster_value": {"name": "Pitmaster {pitmaster_id} Value"},
+      "min_temperature": {"name": "Min Temperature"},
+      "max_temperature": {"name": "Max Temperature"}
     }
   }
 }

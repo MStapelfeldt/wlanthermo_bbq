@@ -1,4 +1,3 @@
-
 """
 Sensor platform for WLANThermo BBQ.
 Provides system, channel, pitmaster, and temperature sensors.
@@ -33,7 +32,9 @@ class WlanthermoChannelTemperatureSensor(CoordinatorEntity, SensorEntity):
             else:
                 device_name = "WLANThermo_BBQ"
         safe_device_name = device_name.replace(" ", "_").lower()
-        self._attr_name = f"Channel {self._channel_number} Temperatur"
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "channel_temperature"
+        self._attr_translation_placeholders = {"channel_number": str(self._channel_number)}
         self._attr_unique_id = f"{safe_device_name}_channel_{self._channel_number}_temperatur"
         self.entity_id = f"sensor.{safe_device_name}_channel_{self._channel_number}_temperatur"
         self._attr_icon = "mdi:thermometer"
@@ -103,6 +104,13 @@ class WlanthermoChannelTemperatureSensor(CoordinatorEntity, SensorEntity):
         }
 
 class WlanthermoSystemSensor(CoordinatorEntity, SensorEntity):
+    @property
+    def device_info(self):
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
     def __init__(self, coordinator, device_name):
         super().__init__(coordinator)
         self._device_name = device_name
@@ -139,12 +147,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities = []
     import re
     safe_device_name = re.sub(r'[^a-zA-Z0-9_]', '_', device_name.lower())
-    # Try to add temperature and system sensors if coordinator.data is available
+    # Try to add temperature, pitmaster value, and system sensors if coordinator.data is available
     if coordinator.data is not None:
         num_channels = len(getattr(coordinator.data, 'channels', []))
         num_pitmasters = len(getattr(coordinator.data, 'pitmasters', []))
         for channel in getattr(coordinator.data, 'channels', []):
             entities.append(WlanthermoChannelTemperatureSensor(coordinator, channel))
+        for pitmaster in getattr(coordinator.data, 'pitmasters', []):
+            entities.append(WlanthermoPitmasterValueSensor(coordinator, pitmaster, safe_device_name))
         # Debug: Log presence and type of coordinator.data.system
         sys_obj = getattr(coordinator.data, 'system', None)
         if sys_obj:
@@ -187,6 +197,24 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     else:
         async_add_entities(entities)
 class WlanthermoSystemGetUpdateSensor(SensorEntity):
+    @property
+    def device_info(self):
+        entry_id = None
+        hass = None
+        if hasattr(self, 'coordinator') and hasattr(self.coordinator, 'config_entry'):
+            entry_id = getattr(self.coordinator.config_entry, 'entry_id', None)
+            hass = getattr(self.coordinator, 'hass', None)
+        if not entry_id or not hass:
+            try:
+                import homeassistant.helpers.entity_platform
+                platform = homeassistant.helpers.entity_platform.current_platform.get()
+                hass = getattr(platform, 'hass', None)
+                entry_id = getattr(platform, 'config_entry', None).entry_id if hasattr(platform, 'config_entry') else None
+            except Exception:
+                pass
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
     def __init__(self, system, device_name):
         self._system = system
         self._attr_name = "System Update Available"
@@ -209,25 +237,22 @@ class WlanthermoSystemGetUpdateSensor(SensorEntity):
 class WlanthermoCloudLinkSensor(SensorEntity):
     @property
     def device_info(self):
-            # Attach to the main device
-            entry_id = None
-            hass = None
-            # Try to get entry_id and hass from context
-            if hasattr(self, 'coordinator') and hasattr(self.coordinator, 'config_entry'):
-                entry_id = getattr(self.coordinator.config_entry, 'entry_id', None)
-                hass = getattr(self.coordinator, 'hass', None)
-            # Fallback: try to get from global hass.data
-            if not entry_id or not hass:
-                try:
-                    import homeassistant.helpers.entity_platform
-                    platform = homeassistant.helpers.entity_platform.current_platform.get()
-                    hass = getattr(platform, 'hass', None)
-                    entry_id = getattr(platform, 'config_entry', None).entry_id if hasattr(platform, 'config_entry') else None
-                except Exception:
-                    pass
-            if hass and entry_id:
-                return hass.data[DOMAIN][entry_id]["device_info"]
-            return None
+        entry_id = None
+        hass = None
+        if hasattr(self, 'coordinator') and hasattr(self.coordinator, 'config_entry'):
+            entry_id = getattr(self.coordinator.config_entry, 'entry_id', None)
+            hass = getattr(self.coordinator, 'hass', None)
+        if not entry_id or not hass:
+            try:
+                import homeassistant.helpers.entity_platform
+                platform = homeassistant.helpers.entity_platform.current_platform.get()
+                hass = getattr(platform, 'hass', None)
+                entry_id = getattr(platform, 'config_entry', None).entry_id if hasattr(platform, 'config_entry') else None
+            except Exception:
+                pass
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
     def __init__(self, iot, device_name):
         self._iot = iot
         self._attr_name = "Cloud Link"
@@ -598,3 +623,35 @@ class WlanthermoPitmasterSensor(CoordinatorEntity, SensorEntity):
             "set_color": self._pitmaster.set_color,
             "value_color": self._pitmaster.value_color,
         }
+class WlanthermoPitmasterValueSensor(CoordinatorEntity, SensorEntity):
+    def __init__(self, coordinator, pitmaster, device_name):
+        super().__init__(coordinator)
+        self._pitmaster_id = pitmaster.id
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "pitmaster_value"
+        self._attr_translation_placeholders = {"pitmaster_id": str(pitmaster.id)}
+        safe_device_name = device_name.replace(" ", "_").lower()
+        self._attr_unique_id = f"{safe_device_name}_pitmaster_{pitmaster.id}_value"
+        self.entity_id = f"sensor.{safe_device_name}_pitmaster_{pitmaster.id}_value"
+        self._attr_icon = "mdi:fan"
+        self._attr_native_unit_of_measurement = "%"
+
+    def _get_pitmaster(self):
+        pitmasters = getattr(self.coordinator.data, 'pitmasters', [])
+        for pm in pitmasters:
+            if pm.id == self._pitmaster_id:
+                return pm
+        return None
+
+    @property
+    def device_info(self):
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
+
+    @property
+    def state(self):
+        pitmaster = self._get_pitmaster()
+        return getattr(pitmaster, "value", None) if pitmaster else None
