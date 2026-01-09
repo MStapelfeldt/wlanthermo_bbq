@@ -54,6 +54,7 @@
       "cloud_status": {"name": "Cloud-Status"},
       "channel": {"name": "Kanal"},
       "channel_temperature": {"name": "Kanal {channel_number} Temperatur"},
+      "channel_time_left": {"name": "Kanal {channel_number} Restzeit"},
       "system_time": {"name": "System Zeit"},
       "device_info": {"name": "Geräte Info"},
       "channel_entity": {"name": "Kanal {channel_number} {field_name}"}

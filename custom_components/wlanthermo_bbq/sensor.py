@@ -1,3 +1,4 @@
+
 """
 Sensor platform for WLANThermo BBQ.
 Provides system, channel, pitmaster, and temperature sensors.
@@ -6,11 +7,13 @@ Provides system, channel, pitmaster, and temperature sensors.
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity
+
 from homeassistant.core import callback
 from .const import DOMAIN
 from datetime import timedelta
 from .data import WlanthermoData
 import logging
+import collections
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -85,23 +88,82 @@ class WlanthermoChannelTemperatureSensor(CoordinatorEntity, SensorEntity):
             return False
         return True
 
+
+# Time left sensor for each channel
+class WlanthermoChannelTimeLeftSensor(CoordinatorEntity, SensorEntity):
+    def __init__(self, coordinator, channel, window_seconds=300):
+        super().__init__(coordinator)
+        self._channel_number = channel.number
+        device_name = getattr(coordinator, 'device_name', None)
+        if not device_name:
+            entry_id = getattr(coordinator, 'config_entry', None).entry_id if hasattr(coordinator, 'config_entry') else None
+            hass = getattr(coordinator, 'hass', None)
+            if hass and entry_id:
+                device_name = hass.data[DOMAIN][entry_id]["device_info"].get("name", "WLANThermo_BBQ")
+            else:
+                device_name = "WLANThermo_BBQ"
+        safe_device_name = device_name.replace(" ", "_").lower()
+        self._attr_has_entity_name = True
+        self._attr_translation_key = "channel_time_left"
+        self._attr_translation_placeholders = {"channel_number": str(self._channel_number)}
+        self._attr_unique_id = f"{safe_device_name}_channel_{self._channel_number}_timeleft"
+        self.entity_id = f"sensor.{safe_device_name}_channel_{self._channel_number}_timeleft"
+        self._attr_icon = "mdi:timer"
+        self._attr_native_unit_of_measurement = "min"
+        self._window_seconds = window_seconds
+        self._history = collections.deque(maxlen=60)  # store (timestamp, temp)
+
+    def _get_channel(self):
+        channels = getattr(self.coordinator.data, 'channels', [])
+        for ch in channels:
+            if ch.number == self._channel_number:
+                return ch
+        return None
+
     @property
-    def extra_state_attributes(self):
-        """Return extra attributes for the temperature sensor."""
+    def device_info(self):
+        entry_id = self.coordinator.config_entry.entry_id if hasattr(self.coordinator, 'config_entry') else None
+        hass = getattr(self.coordinator, 'hass', None)
+        if hass and entry_id:
+            return hass.data[DOMAIN][entry_id]["device_info"]
+        return None
+
+    @property
+    def available(self):
         channel = self._get_channel()
-        if not channel:
-            return {}
-        return {
-            "number": channel.number,
-            "name": channel.name,
-            "typ": channel.typ,
-            "min": channel.min,
-            "max": channel.max,
-            "alarm": channel.alarm,
-            "color": channel.color,
-            "fixed": channel.fixed,
-            "connected": channel.connected,
-        }
+        if not channel or getattr(channel, 'temp', None) == 999.0:
+            return False
+        return True
+
+    @property
+    def state(self):
+        import time
+        channel = self._get_channel()
+        if not self.available:
+            return None
+        now = time.time()
+        temp = getattr(channel, 'temp', None)
+        # Add current reading to history
+        self._history.append((now, temp))
+        # Only use readings within window
+        window_start = now - self._window_seconds
+        recent = [x for x in self._history if x[0] >= window_start]
+        if len(recent) < 2:
+            return None
+        dt = recent[-1][0] - recent[0][0]
+        dtemp = recent[-1][1] - recent[0][1]
+        if dt <= 0:
+            return None
+        rate_per_sec = dtemp / dt
+        if rate_per_sec <= 0:
+            return 0
+        target = getattr(channel, 'max', None)
+        if target is None:
+            return None
+        time_left_min = (target - temp) / (rate_per_sec * 60)
+        if time_left_min < 0:
+            return 0
+        return round(time_left_min, 2)
 
 class WlanthermoSystemSensor(CoordinatorEntity, SensorEntity):
     @property
@@ -153,6 +215,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         num_pitmasters = len(getattr(coordinator.data, 'pitmasters', []))
         for channel in getattr(coordinator.data, 'channels', []):
             entities.append(WlanthermoChannelTemperatureSensor(coordinator, channel))
+            entities.append(WlanthermoChannelTimeLeftSensor(coordinator, channel))
         for pitmaster in getattr(coordinator.data, 'pitmasters', []):
             entities.append(WlanthermoPitmasterValueSensor(coordinator, pitmaster, safe_device_name))
         # Debug: Log presence and type of coordinator.data.system
