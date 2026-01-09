@@ -6,7 +6,7 @@
 ![Support](https://img.shields.io/badge/support-Kein%20Support%20enthalten-lightgrey)
 ![Owner](https://img.shields.io/badge/code%20owner-@MStapelfeldt-purple)
 
-**Version:** 0.1.0   
+**Version:** 0.1.1   
 **Code Owner:** @MStapelfeldt  
 **Lizenz:** MIT
 
@@ -58,8 +58,24 @@ Diese Integration verbindet Home Assistant mit einem WLANThermo BBQ (ESP32/Nano/
 
 ## Entitäten (Beispiele)
 - **Pitmaster**: Duty Cycle, Kanal, PID-Status, Sollwert
-- **Kanäle**: Temperatur, Alarm, Sensortyp, Min/Max
+- **Kanäle**: Temperatur, Alarm, Sensortyp, Min/Max, Restzeit (Time Left)
 - **System**: RSSI, Batteriestatus, Ladevorgang
+
+### Neuer Sensor: Restzeit (Time Left)
+
+Für jeden Temperaturkanal wird automatisch ein Sensor `channel_time_left` erstellt. Dieser zeigt die geschätzte verbleibende Zeit (in Minuten) an, bis die aktuelle Temperatur den eingestellten Zielwert (Max) erreicht.
+
+**Berechnung:**
+- Die Restzeit basiert auf dem Durchschnitt der Temperaturänderung der letzten Minuten (gleitendes Fenster).
+- Die Formel lautet:
+
+	Restzeit (min) = (Zieltemperatur - aktuelle Temperatur) / (Temperaturanstieg pro Minute)
+
+- Wenn die Temperatur stagniert oder sinkt, wird 0 angezeigt.
+- Ist der Kanal nicht verbunden oder keine Daten vorhanden, bleibt der Sensor leer.
+
+**Anwendungsfall:**
+- Praktisch für Grill- oder Garvorgänge, um abzuschätzen, wann das Grillgut fertig ist.
 
 ## Konfiguration
 Die Integration nutzt einen Konfigurationsdialog (Config Flow). Es sind keine manuellen YAML-Einträge notwendig.

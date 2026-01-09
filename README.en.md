@@ -58,8 +58,24 @@ This integration connects Home Assistant to a WLANThermo BBQ (ESP32/Nano/Next). 
 
 ## Entities (Examples)
 - **Pitmaster**: duty cycle, channel, PID status, setpoint
-- **Channels**: temperature, alarm, sensor type, min/max
+- **Channels**: temperature, alarm, sensor type, min/max, Time Left
 - **System**: RSSI, battery status, charging
+
+### New Sensor: Time Left
+
+For each temperature channel, a `channel_time_left` sensor is automatically created. This sensor shows the estimated remaining time (in minutes) until the current temperature reaches the configured target (Max).
+
+**Calculation:**
+- The time left is based on the average temperature change over the last few minutes (sliding window).
+- The formula is:
+
+	Time Left (min) = (Target Temperature - Current Temperature) / (Temperature Rise per Minute)
+
+- If the temperature is stagnant or falling, the sensor will show 0.
+- If the channel is not connected or no data is available, the sensor will be empty.
+
+**Use Case:**
+- Useful for grilling or cooking to estimate when your food will be ready.
 
 ## Configuration
 The integration uses a configuration dialog (config flow). No manual YAML entries are required.
