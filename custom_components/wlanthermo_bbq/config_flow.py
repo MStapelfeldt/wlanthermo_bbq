@@ -21,6 +21,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input=None):
         errors = {}
+        show_auth_fields = False
         if user_input is not None:
             # All fields are required
             if not user_input.get(CONF_HOST):
@@ -31,20 +32,34 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_PATH_PREFIX] = "required"
             if not user_input.get(CONF_MODEL):
                 errors[CONF_MODEL] = "required"
+            if user_input.get("auth_required", False):
+                show_auth_fields = True
+                if not user_input.get("username"):
+                    errors["username"] = "required"
+                if not user_input.get("password"):
+                    errors["password"] = "required"
             if not errors:
-                # Save user_input temporarily in context
                 self.context["user_input"] = user_input
                 return await self.async_step_device_info()
 
-
         model_options = [m[0] for m in MODELS if m[0] != "select"]
-        data_schema = vol.Schema({
+        base_schema = {
             vol.Required("device_name", default="WLANThermo BBQ"): str,
             vol.Required(CONF_HOST): str,
             vol.Required(CONF_PORT, default=80): int,
             vol.Required(CONF_PATH_PREFIX, default="/"): str,
             vol.Required(CONF_MODEL, default=model_options[0]): vol.In(model_options),
-        })
+            vol.Required("auth_required", default=False, description={"suggested_value": False, "translation_key": "auth_required"}): bool,
+            vol.Optional("username", default=""): str,
+            vol.Optional("password", default=""): str,
+        }
+        data_schema = vol.Schema(base_schema)
+        # Only require username/password if auth_required is true
+        if user_input is not None and user_input.get("auth_required", False):
+            if not user_input.get("username"):
+                errors["username"] = "required"
+            if not user_input.get("password"):
+                errors["password"] = "required"
 
         return self.async_show_form(
             step_id="user",
@@ -102,24 +117,40 @@ class WlanthermoBBQOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         errors = {}
+        show_auth_fields = False
         if user_input is not None:
-            # All fields required
             if not user_input.get(CONF_HOST):
                 errors[CONF_HOST] = "required"
             if not user_input.get(CONF_PORT):
                 errors[CONF_PORT] = "required"
             if not user_input.get("scan_interval"):
                 errors["scan_interval"] = "required"
+            if user_input.get("auth_required", False):
+                show_auth_fields = True
+                if not user_input.get("username"):
+                    errors["username"] = "required"
+                if not user_input.get("password"):
+                    errors["password"] = "required"
             if not errors:
                 return self.async_create_entry(title="Options", data=user_input)
 
         model_options = [m[0] for m in MODELS if m[0] != "select"]
-        data_schema = vol.Schema({
+        base_schema = {
             vol.Required(CONF_HOST, default=self._config_entry.data.get(CONF_HOST, "")): str,
             vol.Required(CONF_PORT, default=self._config_entry.data.get(CONF_PORT, 80)): int,
             vol.Required(CONF_MODEL, default=model_options[0]): vol.In(model_options),
             vol.Required("scan_interval", default=10): int,
-        })
+            vol.Required("auth_required", default=self._config_entry.data.get("auth_required", False), description={"suggested_value": False, "translation_key": "auth_required"}): bool,
+            vol.Optional("username", default=self._config_entry.data.get("username", "")): str,
+            vol.Optional("password", default=self._config_entry.data.get("password", "")): str,
+        }
+        data_schema = vol.Schema(base_schema)
+        # Only require username/password if auth_required is true
+        if user_input is not None and user_input.get("auth_required", False):
+            if not user_input.get("username"):
+                errors["username"] = "required"
+            if not user_input.get("password"):
+                errors["password"] = "required"
 
         return self.async_show_form(
             step_id="init",

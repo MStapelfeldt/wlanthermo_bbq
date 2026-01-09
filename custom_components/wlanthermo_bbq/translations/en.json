@@ -42,5 +42,19 @@
     "push": "Push",
     "buzzer": "Buzzer",
     "push_buzzer": "Push + Buzzer"
+  },
+  "sensor": {
+    "auth_required": "Authentication required"
+  },
+  "entity": {
+    "sensor": {
+      "battery_charging": {"name": "Battery Charging"},
+      "battery_level": {"name": "Battery Level"},
+      "temperature_unit": {"name": "Temperature Unit"},
+      "cloud_status": {"name": "Cloud status"},
+      "channel": {"name": "Channel"},
+      "system_time": {"name": "System Time"},
+      "device_info": {"name": "Device Info"}
+    }
   }
 }
