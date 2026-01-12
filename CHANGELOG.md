@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.1] - 2026-01-09
+
+### Added
+- New "Time Left" sensor for each channel, estimating minutes until target temperature is reached.
+- Translations and documentation for the new sensor (README, en/de).
+- Improved dashboard YAML formatting guidance.
+
+### Fixed
+- Various translation and grouping issues.
+- YAML and documentation formatting.
+
 ## 0.1.0 – Initial version
 
 - First public release of the WLANThermo BBQ integration for Home Assistant.
@@ -19,14 +30,3 @@
 - Consistent use of translation_key and translation_placeholders for all dynamic entity names.
 - Sensors and entities now use correct EntityCategory (SENSOR, DIAGNOSTIC, CONFIG).
 - Improved device_info attachment for all entities, ensuring proper grouping.
-
-## [0.1.1] - 2026-01-09
-
-### Added
-- New "Time Left" sensor for each channel, estimating minutes until target temperature is reached.
-- Translations and documentation for the new sensor (README, en/de).
-- Improved dashboard YAML formatting guidance.
-
-### Fixed
-- Various translation and grouping issues.
-- YAML and documentation formatting.
